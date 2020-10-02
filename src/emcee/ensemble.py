@@ -210,6 +210,7 @@ class EnsembleSampler(object):
         thin_by=1,
         thin=None,
         store=True,
+        intervene=None,
         progress=False,
     ):
         """Advance the chain as a generator
@@ -239,6 +240,9 @@ class EnsembleSampler(object):
             skip_initial_state_check (Optional[bool]): If ``True``, a check
                 that the initial_state can fully explore the space will be
                 skipped. (default: ``False``)
+            intervene (Optional[funct]): If not ``None``, will replace each
+                ``state, accepted`` with output of ``intevene(state, 
+                accepted)``
 
 
         Every ``thin_by`` steps, this generator yields the
@@ -347,7 +351,15 @@ class EnsembleSampler(object):
 
                     if tune:
                         move.tune(state, accepted)
-
+                    
+                    # Intervene with user function
+                    if intervene is not None:
+                        try:
+                            state, accepted = intervene(state, accepted)
+                        except:
+                            raise ValueError("funct intervene must take and " +
+                                             "return (state, accepted)")
+                        
                     # Save the new step
                     if store and (i + 1) % checkpoint_step == 0:
                         self.backend.save_step(state, accepted)
